@@ -1,10 +1,10 @@
 #!/bin/bash
 # Variabelen
 # Test kijken of github update???
-id=111
+id=100
 arch_type=amd64
 os_type=ubuntu               # OSType 
-hostname=vm1130              # Hostname
+hostname=container1          # Hostname
 cores=1                      # Aantal CPU cores 
 memory=1024                  # RAM 
 swap=512                     # Swap 
