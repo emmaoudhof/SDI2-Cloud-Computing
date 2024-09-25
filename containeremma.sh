@@ -1,5 +1,6 @@
 #!/bin/bash
 # Variabelen
+# Test kijken of github update???
 id=111
 arch_type=amd64
 os_type=ubuntu               # OSType 
