@@ -13,7 +13,7 @@ password='emmaoudhof'        # Wachtwoord aangepast
 net0_name=e1000
 bridge=vmbr0
 gw=10.24.13.1                # Gateway
-ip=10.24.13.10/24            # IP-adres 
+ip=10.24.13.100/24            # IP-adres 
 type=veth
 start_wait_time=10
 
