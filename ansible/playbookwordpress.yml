@@ -15,7 +15,15 @@
     ansible_python_interpreter: /usr/bin/python3
 
   tasks:
-    - name: Instaleren van nodige modules
+    # Update en upgrade het systeem
+    - name: Update en upgrade het systeem
+      apt:
+        update_cache: yes
+        upgrade: dist
+      ignore_errors: yes
+
+    # Installeer Apache2, MySQL-server, en PHP met vereiste modules voor WordPress
+    - name: Installeer Apache2, MySQL-server en PHP met vereiste modules
       apt:
         name:
           - apache2
@@ -31,3 +39,133 @@
           - php-xmlrpc
         state: present
       ignore_errors: yes
+
+
+    # Maak de WordPress database en gebruiker aan in MySQL
+    - name: Maak WordPress MySQL database en gebruiker aan
+      shell: |
+        mysql -e "CREATE DATABASE IF NOT EXISTS {{ wordpress_db_name }};"
+        mysql -e "CREATE USER IF NOT EXISTS '{{ wordpress_db_user }}'@'localhost' IDENTIFIED BY '{{ wordpress_db_password }}';"
+        mysql -e "GRANT ALL PRIVILEGES ON {{ wordpress_db_name }}.* TO '{{ wordpress_db_user }}'@'localhost';"
+        mysql -e "FLUSH PRIVILEGES;"
+      ignore_errors: no
+
+    # Download WordPress
+    - name: Download WordPress
+      get_url:
+        url: https://wordpress.org/latest.tar.gz
+        dest: /var/www/html/latest.tar.gz
+      ignore_errors: yes
+
+    # Pak het WordPress archief uit
+    - name: Pak WordPress uit
+      unarchive:
+        src: /var/www/html/latest.tar.gz
+        dest: /var/www/html/
+        remote_src: yes
+
+    # Verplaats WordPress bestanden en verwijder archief
+    - name: Verplaats WordPress bestanden en ruim op
+      shell: |
+        mv /var/www/html/wordpress/* /var/www/html/
+        rm -rf /var/www/html/wordpress latest.tar.gz
+      ignore_errors: no
+
+    # Kopieer het voorbeeldconfiguratiebestand naar wp-config.php
+    - name: Kopieer wp-config-sample.php naar wp-config.php
+      command: cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
+      ignore_errors: no
+
+    # Configureer WordPress database instellingen in wp-config.php
+    - name: Configureer WordPress
+      lineinfile:
+        path: /var/www/html/wp-config.php
+        regexp: "{{ item.search }}"
+        line: "{{ item.replace }}"
+      loop:
+        - { search: 'database_name_here', replace: "define('DB_NAME', '{{ wordpress_db_name }}');" }
+        - { search: 'username_here', replace: "define('DB_USER', '{{ wordpress_db_user }}');" }
+        - { search: 'password_here', replace: "define('DB_PASSWORD', '{{ wordpress_db_password }}');" }
+      notify: herstart apache
+
+    # Stel de juiste bestandsrechten in voor WordPress
+    - name: Stel de juiste permissies in voor WordPress
+      file:
+        path: /var/www/html
+        owner: www-data
+        group: www-data
+        mode: '0755'
+        recurse: yes
+
+    # Schakel de Apache rewrite module in voor SEO-vriendelijke URLs
+    - name: Schakel Apache rewrite module in
+      command: a2enmod rewrite
+
+    # Schakel PrivateTmp uit in de Apache serviceconfiguratie
+    - name: Schakel PrivateTmp uit in de Apache service
+      replace:
+        path: /lib/systemd/system/apache2.service
+        regexp: 'PrivateTmp=true'
+        replace: 'PrivateTmp=false'
+
+    # Schakel ProtectSystem uit in de Apache serviceconfiguratie
+    - name: Schakel ProtectSystem uit in de Apache service
+      replace:
+        path: /lib/systemd/system/apache2.service
+        regexp: 'ProtectSystem=full'
+        replace: '#ProtectSystem=full'
+
+    # Schakel ProtectHome uit in de Apache serviceconfiguratie
+    - name: Schakel ProtectHome uit in de Apache service
+      replace:
+        path: /lib/systemd/system/apache2.service
+        regexp: 'ProtectHome=true'
+        replace: '#ProtectHome=true'
+
+    # Verwijder het [Install] gedeelte uit de Apache serviceconfiguratie
+    - name: Verwijder [Install] sectie uit Apache service
+      lineinfile:
+        path: /lib/systemd/system/apache2.service
+        regexp: '\[Install\]'
+        state: absent
+
+    # Voeg aangepaste instellingen toe aan de [Service] sectie in Apache serviceconfiguratie
+    - name: Voeg aangepaste instellingen toe aan [Service] sectie
+      blockinfile:
+        path: /lib/systemd/system/apache2.service
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        block: |
+          PrivateTmp=false
+          ProtectSystem=false
+          ProtectHome=false
+        insertafter: '\[Service\]'
+
+    # Schakel de Apache rewrite module opnieuw in en herstart Apache
+    - name: Schakel Apache rewrite module in
+      command: a2enmod rewrite
+      notify: herstart apache
+
+    # Pas Apache dir.conf aan zodat index.php als standaard indexpagina wordt ingesteld
+    - name: Werk Apache dir.conf bij voor index.php
+      lineinfile:
+        path: /etc/apache2/mods-enabled/dir.conf
+        regexp: 'DirectoryIndex'
+        line: 'DirectoryIndex index.php index.html'
+      notify: herstart apache
+
+    # Herlaad systemd om configuratiewijzigingen door te voeren
+    - name: Herlaad systemd
+      command: systemctl daemon-reload
+
+    # Herstart Apache om wijzigingen toe te passen
+    - name: Herstart Apache
+      service:
+        name: apache2
+        state: restarted
+
+  handlers:
+    # Handler om Apache te herstarten indien nodig
+    - name: herstart apache
+      service:
+        name: apache2
+        state: restarted
