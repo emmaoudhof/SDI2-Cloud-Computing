@@ -1,0 +1,33 @@
+---
+- name: wordpress op containers
+  hosts: localhost
+  become: yes
+  connection: local
+  vars:
+    wordpress_db_name: wordpress
+    wordpress_db_user: gebruiker_wordpress
+    wordpress_db_password: emmaoudhof
+    wordpress_db_host: localhost
+    wordpress_site_url: "http://{{ ansible_default_ipv4.address }}"
+    wordpress_admin_user: admin
+    wordpress_admin_password: admin
+    wordpress_admin_email: admin@admin.com
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Instaleren van nodige modules
+      apt:
+        name:
+          - apache2
+          - mysql-server
+          - php
+          - libapache2-mod-php
+          - php-mysql
+          - php-curl
+          - php-gd
+          - php-imagick
+          - php-mbstring
+          - php-xml
+          - php-xmlrpc
+        state: present
+      ignore_errors: yes
