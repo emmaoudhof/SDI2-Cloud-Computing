@@ -8,6 +8,9 @@ echo "Wat is de naam die als basis voor de servers moet worden gebruikt?:"
 read server_naam
 echo "Wat is het laatste deel van de IP-adressen van de containers?:"
 read ip_eind
+echo "Geef het IP-adres van de monitoringsserver op:"
+read ip_monitor
+
 
 # Variabelen voor containerscript
 arch_type=amd64
@@ -88,7 +91,7 @@ for ((i=0; i<container_aantal; i++)); do
         pct exec $id -- apt-get install -y ansible
         pct exec $id -- git clone https://github.com/emmaoudhof/SDI2-Cloud-Computing.git /SDI2-Cloud-Computing
         pct exec $id -- ansible-playbook -i localhost, /SDI2-Cloud-Computing/ansible/playbookwordpress.yml
-        pct exec $id -- ansible-playbook -i localhost, /SDI2-Cloud-Computing/ansible/zabbixplaybookagent.yml --extra-vars "zabbix_server_ip=$monitor_ip"
+        pct exec $id -- ansible-playbook -i localhost, /SDI2-Cloud-Computing/ansible/zabbixplaybookagent.yml --extra-vars "zabbix_server_ip=$ip_monitor"
         pct exec $id -- systemctl daemon-reload
         pct exec $id -- systemctl restart apache2
     else
