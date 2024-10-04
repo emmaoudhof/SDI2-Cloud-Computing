@@ -1,0 +1,122 @@
+---
+- name: Installatie van MySQL en Zabbix-server
+  hosts: localhost
+  become: yes
+  connection: local
+  vars:
+    zabbix_db_name: zabbix
+    zabbix_db_user: zabbix_gebruiker
+    zabbix_db_password: emmaoudhof
+
+  tasks:
+    - name: Systeem bijwerken en upgraden
+      apt:
+        update_cache: yes
+        upgrade: dist
+      # Voert een update en systeemupgrade uit.
+
+    - name: Zabbix repository pakket downloaden
+      get_url:
+        url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu24.04_all.deb"
+        dest: "/tmp/zabbix-release_7.0-2+ubuntu24.04_all.deb"
+      # Haalt het Zabbix repository pakket op.
+
+    - name: Zabbix repository installeren
+      apt:
+        deb: "/tmp/zabbix-release_7.0-2+ubuntu24.04_all.deb"
+      # Voegt de Zabbix repository toe aan het systeem.
+
+    - name: Pakketlijst bijwerken na toevoegen van Zabbix repository
+      apt:
+        update_cache: yes
+      # Werk de pakketlijst bij om Zabbix-pakketten beschikbaar te maken.
+
+    - name: MySQL server installeren
+      apt:
+        name: mysql-server
+        state: present
+      # Installeert de MySQL server op het systeem.
+
+    - name: Zabbix-server en agent installeren
+      apt:
+        name:
+          - zabbix-server-mysql
+          - zabbix-frontend-php
+          - zabbix-apache-conf
+          - zabbix-sql-scripts
+          - zabbix-agent
+        state: present
+      # Installeert Zabbix server, frontend, en agent.
+
+    - name: MySQL log_bin instelling aanpassen
+      shell: |
+        mysql -e "SET GLOBAL log_bin_trust_function_creators = 1;"
+      ignore_errors: no
+      # Past de MySQL-instelling aan om log-bin restricties te verwijderen.
+
+    - name: Verwijder bestaande Zabbix database indien aanwezig
+      shell: |
+        mysql -e "DROP DATABASE IF EXISTS {{ zabbix_db_name }};"
+      ignore_errors: yes
+      # Verwijdert een bestaande Zabbix-database als die al bestaat.
+
+    - name: Maak Zabbix database en gebruiker aan
+      shell: |
+        mysql -e "CREATE DATABASE IF NOT EXISTS {{ zabbix_db_name }} CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;"
+        mysql -e "CREATE USER IF NOT EXISTS '{{ zabbix_db_user }}'@'localhost' IDENTIFIED BY '{{ zabbix_db_password }}';"
+        mysql -e "GRANT ALL PRIVILEGES ON {{ zabbix_db_name }}.* TO '{{ zabbix_db_user }}'@'localhost';"
+        mysql -e "FLUSH PRIVILEGES;"
+      ignore_errors: no
+      # Maakt de Zabbix-database en de gebruiker aan, en verleent de juiste rechten.
+
+    - name: Zabbix databaseschema importeren
+      shell: |
+        zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz | mysql --default-character-set=utf8mb4 -u{{ zabbix_db_user }} -p{{ zabbix_db_password }} {{ zabbix_db_name }}
+      ignore_errors: no
+      # Importeert het Zabbix databaseschema naar de MySQL-database.
+
+    - name: Zabbix-server configureren met database-instellingen
+      lineinfile:
+        path: /etc/zabbix/zabbix_server.conf
+        regexp: "{{ item.search }}"
+        line: "{{ item.replace }}"
+      loop:
+        - { search: '^DBHost=', replace: 'DBHost=localhost' }
+        - { search: '^DBName=', replace: 'DBName={{ zabbix_db_name }}' }
+        - { search: '^DBUser=', replace: 'DBUser={{ zabbix_db_user }}' }
+        - { search: '^DBPassword=', replace: 'DBPassword={{ zabbix_db_password }}' }
+      notify: herstart zabbix-server
+      # Past de Zabbix-serverconfiguratie aan met databasegegevens.
+
+    - name: Zabbix-server en agent starten
+      service:
+        name: zabbix-server
+        state: started
+      notify: herstart zabbix-agent
+      # Start de Zabbix-server en agent.
+
+    - name: Zabbix-server en agent inschakelen bij opstarten
+      systemd:
+        name: zabbix-server
+        enabled: yes
+      # Schakelt de Zabbix-server en agent in voor automatisch opstarten.
+
+    - name: Controleer of Zabbix-webinterface toegankelijk is
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}/zabbix"
+        status_code: 200
+      ignore_errors: yes
+      # Controleert of de Zabbix webinterface bereikbaar is.
+
+  handlers:
+    - name: herstart zabbix-server
+      service:
+        name: zabbix-server
+        state: restarted
+      # Herstart de Zabbix-server na configuratiewijzigingen.
+
+    - name: herstart zabbix-agent
+      service:
+        name: zabbix-agent
+        state: restarted
+      # Herstart de Zabbix-agent.
