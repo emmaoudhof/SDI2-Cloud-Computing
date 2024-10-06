@@ -1,0 +1,27 @@
+---
+- name: Configure Firewall for WordPress Server
+  hosts: localhost
+  become: yes
+  connection: local
+
+  tasks:
+    - name: Sta HTTP-verkeer toe
+      command: ufw allow from any to any port 80 proto tcp
+
+    - name: Sta Zabbix-agentverkeer toe op poort 10050
+      command: ufw allow from any to any port 10050
+
+    - name: Sta SSH-toegang toe
+      command: ufw allow from any to any port 22
+
+    - name: Sta HTTPS-verkeer toe
+      command: ufw allow from any to any port 443 proto tcp
+
+    - name: Sta Zabbix-serververkeer toe op poort 10051
+      command: ufw allow from any to any port 10051
+
+    - name: Weiger al het andere inkomende verkeer
+      command: ufw default deny incoming
+
+    - name: Schakel UFW in
+      command: ufw enable

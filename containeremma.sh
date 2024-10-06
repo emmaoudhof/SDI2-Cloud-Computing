@@ -92,6 +92,7 @@ for ((i=0; i<container_aantal; i++)); do
         pct exec $id -- git clone https://github.com/emmaoudhof/SDI2-Cloud-Computing.git /SDI2-Cloud-Computing
         pct exec $id -- ansible-playbook -i localhost, /SDI2-Cloud-Computing/ansible/playbookwordpress.yml
         pct exec $id -- ansible-playbook -i localhost, /SDI2-Cloud-Computing/ansible/zabbixplaybookagent.yml --extra-vars "zabbix_server_ip=$ip_monitor"
+        pct exec $id -- ansible-playbook -i localhost, /SDI2-Cloud-Computing/ansible/firewallplaybook.yml
         pct exec $id -- systemctl daemon-reload
         pct exec $id -- systemctl restart apache2
     else
