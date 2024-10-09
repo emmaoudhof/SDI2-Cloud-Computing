@@ -5,71 +5,58 @@
   connection: local
   vars:
     host_metadata: "wordpress"
-    zabbix_server_ip: "{{ zabbix_server_ip }}"
     client_ip: "{{ ansible_default_ipv4.address }}"
-    
+
   tasks:
     - name: Download Zabbix repository bestand
       get_url:
         url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu24.04_all.deb"
         dest: "/tmp/zabbix-release_7.0-2+ubuntu24.04_all.deb"
-      # Deze taak downloadt het Zabbix repository bestand naar de lokale machine.
 
     - name: Voeg Zabbix repository toe
       apt:
         deb: "/tmp/zabbix-release_7.0-2+ubuntu24.04_all.deb"
-      # Deze taak voegt de Zabbix repository toe aan het pakketbeheer, zodat Zabbix via apt geïnstalleerd kan worden.
 
-    - name: Systeem pakketten bijwerken
-      apt:
-        update_cache: yes
-      ignore_errors: yes
-      # Deze taak werkt de lokale apt-cache bij om ervoor te zorgen dat de nieuwste pakketten beschikbaar zijn.
+    - name: Verwijder Zabbix repository bestand na installatie
+      file:
+        path: "/tmp/zabbix-release_7.0-2+ubuntu24.04_all.deb"
+        state: absent
 
     - name: Zabbix-agent installeren
       apt:
         name: zabbix-agent
         state: present
-      ignore_errors: no
-      # Deze taak installeert de Zabbix-agent op het systeem.
-    
+
     - name: Stel HostMetadata in voor Zabbix-agent
       lineinfile:
         path: /etc/zabbix/zabbix_agentd.conf
         regexp: '^# HostMetadata='
         line: "HostMetadata={{ host_metadata }}"
-        # Deze taak stelt de HostMetadata waarde in voor de Zabbix-agent configuratie.
-
 
     - name: Zabbix-agent configureren met server IP
       lineinfile:
         path: /etc/zabbix/zabbix_agentd.conf
         regexp: '^Server='
         line: "Server={{ zabbix_server_ip }}"
-      # Deze taak past het configuratiebestand van de Zabbix-agent aan en stelt het IP-adres van de Zabbix-server in.
 
     - name: Actieve verbindingen naar server toestaan
       lineinfile:
         path: /etc/zabbix/zabbix_agentd.conf
         regexp: '^ServerActive='
         line: "ServerActive={{ zabbix_server_ip }}"
-      # Deze taak configureert de Zabbix-agent om actieve verbindingen vanaf de server toe te staan.
 
-    - name: Client IP instellen voor Zabbix-agent
+    - name: Hostnaam instellen voor Zabbix-agent
       lineinfile:
         path: /etc/zabbix/zabbix_agentd.conf
         regexp: '^Hostname='
-        line: "Hostname={{ client_ip }}"
-      # Deze taak stelt het IP-adres van de client in als de Hostname voor de Zabbix-agent.
+        line: "Hostname={{ ansible_hostname }}"
 
     - name: Zabbix-agent opnieuw starten
       systemd:
         name: zabbix-agent
         state: restarted
-      # Deze taak herstart de Zabbix-agent om de nieuwe configuratie actief te maken.
 
     - name: Zabbix-agent inschakelen bij systeemstart
       systemd:
         name: zabbix-agent
         enabled: yes
-      # Deze taak zorgt ervoor dat de Zabbix-agent automatisch wordt opgestart bij het opstarten van het systeem.
