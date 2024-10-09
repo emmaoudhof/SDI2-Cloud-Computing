@@ -4,7 +4,7 @@
   become: yes
   connection: local
   vars:
-    espocrm_db_name: 
+    espocrm_db_name: crmespo
     espocrm_db_user: crm_gebruiker
     espocrm_db_password: emmaoudhof
     espocrm_db_host: localhost
@@ -18,23 +18,23 @@
   tasks:
   - name: Systeem updaten en upgraden
     apt:
-      update_cache: ja
+      update_cache: yes
       upgrade: dist
-    ignore_errors: ja
+    ignore_errors: yes
     # Deze taak zorgt ervoor dat het systeem wordt geüpdatet en dat er een distributie-upgrade wordt uitgevoerd
 
   - name: Apache2 installeren
     apt:
       name: apache2
       state: aanwezig
-    ignore_errors: ja
+    ignore_errors: yes
     # Installeert de Apache2 webserver
 
   - name: MySQL-server installeren
     apt:
       name: mysql-server
       state: aanwezig
-    ignore_errors: ja
+    ignore_errors: yes
     # Installeert de MySQL-server voor databasebeheer
 
   - name: PHP en vereiste modules installeren
@@ -51,14 +51,14 @@
         - php-xmlrpc
         - php-zip  
       state: aanwezig
-    ignore_errors: ja
+    ignore_errors: yes
     # Installeert PHP en de benodigde modules voor EspoCRM
 
   - name: Installeer unzip pakket
     apt:
       name: unzip
       state: aanwezig
-    ignore_errors: ja
+    ignore_errors: yes
     # Installeert het 'unzip' pakket om bestanden uit te pakken
 
   - name: EspoCRM MySQL-database en gebruiker aanmaken
@@ -67,28 +67,28 @@
       mysql -e "CREATE USER IF NOT EXISTS '{{ espocrm_db_user }}'@'localhost' IDENTIFIED BY '{{ espocrm_db_password }}';"
       mysql -e "GRANT ALL PRIVILEGES ON {{ espocrm_db_name }}.* TO '{{ espocrm_db_user }}'@'localhost';"
       mysql -e "FLUSH PRIVILEGES;"
-    ignore_errors: nee
+    ignore_errors: no
     # Maakt de EspoCRM MySQL-database en bijbehorende gebruiker aan
 
   - name: EspoCRM downloaden
     get_url:
       url: https://www.espocrm.com/downloads/EspoCRM-8.4.1.zip
       dest: /var/www/html/EspoCRM-8.4.1.zip
-    ignore_errors: ja
+    ignore_errors: yes
     # Downloadt het EspoCRM pakket van de officiële website
 
   - name: EspoCRM uitpakken
     unarchive:
       src: /var/www/html/EspoCRM-8.4.1.zip
       dest: /var/www/html/
-      remote_src: ja
+      remote_src: yes
     # Pakt het EspoCRM archief uit naar de webroot
 
   - name: Verplaats alle bestanden van EspoCRM-8.4.1 naar /var/www/html
     shell: |
       mv /var/www/html/EspoCRM-8.4.1/* /var/www/html/
       rm -rf /var/www/html/EspoCRM-8.4.1
-    ignore_errors: nee
+    ignore_errors: no
     # Verplaatst de uitgepakte bestanden naar de webroot en verwijdert de map
 
   - name: Stel juiste permissies in voor EspoCRM-bestanden en mappen
@@ -97,7 +97,7 @@
       owner: www-data
       group: www-data
       mode: '0755'
-      recurse: ja
+      recurse: yes
     # Wijzigt de bestandseigenaar naar www-data en stelt de juiste rechten in voor de webroot
 
   - name: Schrijfbare permissies instellen voor specifieke EspoCRM-mappen
@@ -106,7 +106,7 @@
       owner: www-data
       group: www-data
       mode: '0775'
-      recurse: ja
+      recurse: yes
     loop:
       - data
       - custom
@@ -151,7 +151,7 @@
     uri:
       url: "{{ espocrm_site_url }}"
       status_code: 200
-    ignore_errors: ja
+    ignore_errors: yes
     # Controleert of de EspoCRM-website correct functioneert
 
   handlers:
