@@ -5,19 +5,26 @@
   connection: local
   vars:
     host_metadata: "crm"
-    zabbix_server_ip: "{{ monitor_ip }}"
+    zabbix_server_ip: "{{ monitor_ip }}"  # Zorg ervoor dat monitor_ip wordt doorgegeven als extra var bij de playbook run
     client_ip: "{{ ansible_default_ipv4.address }}"
-    ubuntu_version: "{{ ansible_distribution_release }}"  # Zorg ervoor dat de juiste versie wordt gebruikt
+    ubuntu_version: "{{ ansible_distribution_release }}"  # Dynamisch de juiste Ubuntu versie bepalen
 
   tasks:
+    - name: Controleer of de Zabbix repository al is toegevoegd
+      stat:
+        path: /etc/apt/sources.list.d/zabbix.list
+      register: zabbix_repo_check
+
     - name: Download Zabbix repository bestand
       get_url:
         url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu{{ ubuntu_version }}_all.deb"
         dest: "/tmp/zabbix-release_7.0-2+ubuntu{{ ubuntu_version }}_all.deb"
+      when: not zabbix_repo_check.stat.exists
 
     - name: Voeg Zabbix repository toe
       apt:
         deb: "/tmp/zabbix-release_7.0-2+ubuntu{{ ubuntu_version }}_all.deb"
+      when: not zabbix_repo_check.stat.exists
 
     - name: Update apt cache
       apt:
@@ -27,8 +34,43 @@
       file:
         path: "/tmp/zabbix-release_7.0-2+ubuntu{{ ubuntu_version }}_all.deb"
         state: absent
+      when: not zabbix_repo_check.stat.exists
 
     - name: Installeer Zabbix-agent
       apt:
         name: zabbix-agent
         state: present
+
+    - name: Stel HostMetadata in voor Zabbix-agent
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^# HostMetadata='
+        line: "HostMetadata={{ host_metadata }}"
+
+    - name: Zabbix-agent configureren met server IP
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^Server='
+        line: "Server={{ zabbix_server_ip }}"
+
+    - name: Actieve verbindingen naar server toestaan
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^ServerActive='
+        line: "ServerActive={{ zabbix_server_ip }}"
+
+    - name: Hostnaam instellen voor Zabbix-agent
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^Hostname='
+        line: "Hostname={{ ansible_hostname }}"
+
+    - name: Zabbix-agent opnieuw starten
+      systemd:
+        name: zabbix-agent
+        state: restarted
+
+    - name: Zabbix-agent inschakelen bij systeemstart
+      systemd:
+        name: zabbix-agent
+        enabled: yes
