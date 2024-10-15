@@ -1,0 +1,66 @@
+---
+- name: Docker instalatie 
+  hosts: localhost
+  become: yes
+  connection: local
+  tasks:
+    - name: Oude versies van Docker verwijderen (indien aanwezig)
+      apt:
+        name:
+          - docker
+          - docker-engine
+          - docker.io
+        state: absent
+        purge: yes
+
+    - name: Werk de cache van pakketbeheer bij
+      apt:
+        update_cache: yes
+
+    - name: Installeer Docker met apt
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Controleer de Docker-versie
+      command: docker --version
+      register: docker_version_output
+
+    - name: Docker-versie weergeven
+      debug:
+        var: docker_version_output.stdout
+
+    - name: Pull het 'Hallo-wereld'-beeld
+      docker_image:
+        name: hello-world
+        source: pull
+
+    - name: Voer de container 'Hello-World' uit
+      docker_container:
+        name: hello-world-test
+        image: hello-world
+        state: started
+
+    - name: Controleer of de afbeelding 'Hallo-wereld' aanwezig is
+      command: docker images
+      register: docker_images_output
+
+    - name: Geef Docker-afbeeldingen weer
+      debug:
+        var: docker_images_output.stdout
+
+    - name: Maak een lijst van alle Docker-containers
+      command: docker ps -a
+      register: docker_containers_output
+
+    - name: Toon alle Docker-containers
+      debug:
+        var: docker_containers_output.stdout
+
+# Wat doet dit playbook:
+# Het verwijdert eventuele oude versies van Docker.
+# Het update de systeempakketten.
+# Het installeert Docker via apt (je kunt ook snap gebruiken, maar dat is optioneel).
+# Het controleert of Docker succesvol is geïnstalleerd door de versie te controleren.
+# Het trekt de hello-world Docker-image en voert deze uit om te testen.
+# Het toont de geïnstalleerde Docker-images en alle containers (gestopt of actief).
