@@ -5,9 +5,9 @@
   connection: local
   vars:
     host_metadata: "crm"
-    zabbix_server_ip: "{{ monitor_ip }}"  # Zorg ervoor dat monitor_ip wordt doorgegeven als extra var bij de playbook run
+    zabbix_server_ip: "{{ monitor_ip }}"  
     client_ip: "{{ ansible_default_ipv4.address }}"
-    ubuntu_version: "{{ ansible_distribution_release }}"  # Dynamisch de juiste Ubuntu versie bepalen
+    ubuntu_version: "{{ ansible_distribution_release }}"  
 
   tasks:
     - name: Controleer of de Zabbix repository al is toegevoegd
