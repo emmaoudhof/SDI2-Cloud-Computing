@@ -43,6 +43,7 @@ for ((i=0; i<vm_aantal; i++)); do
     ssh -i ${sshkey_padopslag} emma@${ip_oud} "sudo sed -i 's/127.0.1.1.*/127.0.1.1 ${naam_nieuw}/' /etc/hosts"
     ssh -i ${sshkey_padopslag} emma@${ip_oud} "echo '${naam_nieuw}' | sudo tee /etc/hostname"
     # Git-repository klonen
+    ssh -i ${sshkey_padopslag} emma@${ip_oud} "sudo apt-get install git"
     qm reset ${vmid_nieuw}
     sleep 200
 
