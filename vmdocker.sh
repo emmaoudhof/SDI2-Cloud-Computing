@@ -25,9 +25,10 @@ for ((i=0; i<vm_aantal; i++)); do
     ip_nieuw="10.24.13.$((ip_eind + i))"
     naam_nieuw="${vm_naam}${vmid_nieuw}"
 
+
     echo "Klonen vm id: ${source_vm_id} (template) van ${source_node} naar ${plek_node}. Hij heet: ${naam_nieuw} en het ip is: ${ip_nieuw}"
-    qm clone ${source_vm_id} ${vmid_nieuw} --name ${naam_nieuw} --full --target ${plek_node}
-    qm start ${vmid_nieuw}
+    qm clone ${source_vm_id} ${vmid_nieuw} --name ${naam_nieuw} --full --target ${plek_node} --storage poolemma
+    ssh ${plek_node} "qm start  ${vmid_nieuw}"
     
     echo "Even wachteeennnnnn, vm ${vmid_nieuw} start nu op......"
     sleep 200
@@ -44,9 +45,9 @@ for ((i=0; i<vm_aantal; i++)); do
     ssh -i ${sshkey_padopslag} emma@${ip_oud} "echo '${naam_nieuw}' | sudo tee /etc/hostname"
     # Git-repository klonen
     ssh -i ${sshkey_padopslag} emma@${ip_oud} "sudo apt-get install git"
-    qm reset ${vmid_nieuw}
+    ssh ${plek_node} "qm reset ${vmid_nieuw} "
     sleep 200
-
+    ssh ${plek_node} "qm start  ${vmid_nieuw}"
     echo "Klonen van eigen git"
     ssh -i ${sshkey_padopslag} emma@${ip_nieuw} "git clone https://github.com/emmaoudhof/SDI2-Cloud-Computing.git"
     ssh -i ${sshkey_padopslag} emma@${ip_nieuw} "cd SDI2-Cloud-Computing/ansible"
